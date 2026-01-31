@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>p5.js 粒子捕手遊戲</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background: #050510; font-family: sans-serif; }
+        /* 遊戲 UI 層 */
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00fff2;
+            pointer-events: none; /* 讓點擊穿透到 Canvas */
+            text-shadow: 0 0 10px rgba(0,255,242,0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <h2 id="score">分數: 0</h2>
+        <h3 id="timer">時間: 30</h3>
+    </div>
+
+    <script>
+        let particles = [];
+        let score = 0;
+        let timer = 30;
+        let gameState = "PLAY"; // PLAY or GAMEOVER
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            for (let i = 0; i < 80; i++) {
+                particles.push(new Particle());
+            }
+            // 每秒執行一次計時器
+            setInterval(countDown, 1000);
+        }
+
+        function draw() {
+            background(10, 10, 25, 50); // 增加殘影效果
+
+            if (gameState === "PLAY") {
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    particles[i].update();
+                    particles[i].display();
+                    
+                    // 碰撞偵測：滑鼠與粒子的距離
+                    let d = dist(mouseX, mouseY, particles[i].pos.x, particles[i].pos.y);
+                    if (d < 30) {
+                        particles.splice(i, 1); // 移除被捕獲的粒子
+                        score += 10;
+                        document.getElementById('score').innerText = `分數: ${score}`;
+                        // 捕獲後產生一個新粒子，保持畫面豐富度
+                        particles.push(new Particle());
+                    }
+                }
+                drawConnections();
+            } else {
+                showGameOver();
+            }
+        }
+
+        function countDown() {
+            if (timer > 0) {
+                timer--;
+                document.getElementById('timer').innerText = `時間: ${timer}`;
+            } else {
+                gameState = "GAMEOVER";
+            }
+        }
+
+        function showGameOver() {
+            fill(255);
+            textAlign(CENTER, CENTER);
+            textSize(50);
+            text("遊戲結束", width / 2, height / 2 - 20);
+            textSize(20);
+            text(`最終得分: ${score} | 點擊畫面重新開始`, width / 2, height / 2 + 40);
+        }
+
+        function mousePressed() {
+            if (gameState === "GAMEOVER") {
+                score = 0;
+                timer = 30;
+                particles = [];
+                for (let i = 0; i < 80; i++) particles.push(new Particle());
+                gameState = "PLAY";
+            }
+        }
+
+        class Particle {
+            constructor() {
+                this.pos = createVector(random(width), random(height));
+                this.vel = p5.Vector.random2D().mult(random(1, 3));
+                this.size = random(4, 8);
+            }
+
+            update() {
+                this.pos.add(this.vel);
+                if (this.pos.x < 0 || this.pos.x > width) this.vel.x *= -1;
+                if (this.pos.y < 0 || this.pos.y > height) this.vel.y *= -1;
+            }
+
+            display() {
+                noStroke();
+                fill(0, 255, 242, 200);
+                circle(this.pos.x, this.pos.y, this.size);
+            }
+        }
+
+        function drawConnections() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    let d = dist(particles[i].pos.x, particles[i].pos.y, particles[j].pos.x, particles[j].pos.y);
+                    if (d < 100) {
+                        stroke(0, 255, 242, map(d, 0, 100, 100, 0));
+                        line(particles[i].pos.x, particles[i].pos.y, particles[j].pos.x, particles[j].pos.y);
+                    }
+                }
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
